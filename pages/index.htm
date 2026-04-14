@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BVG Next Bus</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a2e;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+      gap: 32px;
+    }
+
+    .stop-section {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .stop-header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .stop-name {
+      font-size: 0.85rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 8px;
+    }
+
+    .line-badges {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .line-badge {
+      display: inline-block;
+      font-weight: 800;
+      font-size: 1.4rem;
+      padding: 5px 16px;
+      border-radius: 8px;
+      letter-spacing: 0.05em;
+    }
+
+    .line-badge.express { background: #f5a623; color: #1a1a2e; }
+    .line-badge.bus     { background: #5b8dd9; color: #fff; }
+    .line-badge.tram    { background: #d94040; color: #fff; }
+
+    .walk-info {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #bbb;
+      margin-top: 8px;
+      letter-spacing: 0.03em;
+    }
+
+    .updated-at {
+      font-size: 0.7rem;
+      color: #555;
+      margin-top: 8px;
+    }
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .status-box {
+      text-align: center;
+      padding: 32px 0;
+      color: #555;
+      font-size: 0.9rem;
+    }
+
+    .departure-card {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .departure-card.is-next {
+      border-color: #f5a623;
+      background: #1e2d50;
+    }
+
+    .departure-card.cancelled {
+      opacity: 0.55;
+      border-color: #c0392b;
+    }
+
+    /* small line pill on the card */
+    .card-line {
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .card-line.express { background: #f5a623; color: #1a1a2e; }
+    .card-line.bus     { background: #5b8dd9; color: #fff; }
+    .card-line.tram    { background: #d94040; color: #fff; }
+
+    .countdown {
+      min-width: 58px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .countdown .mins {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+      color: #f5a623;
+    }
+
+    .departure-card.is-next .countdown .mins { color: #fff; }
+    .departure-card.cancelled .countdown .mins { color: #c0392b; font-size: 0.9rem; }
+
+    .countdown .label {
+      font-size: 0.6rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .info { flex: 1; min-width: 0; }
+
+    .direction {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #ddd;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .times {
+      font-size: 0.75rem;
+      color: #777;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .time-planned { color: #999; }
+
+    .badge {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 20px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .badge.on-time   { background: #1a4a2e; color: #4ade80; }
+    .badge.delayed   { background: #4a2a1a; color: #fb923c; }
+    .badge.cancelled { background: #4a1a1a; color: #f87171; }
+    .badge.next-tag  { background: #f5a623; color: #1a1a2e; }
+
+    .spinner {
+      width: 30px; height: 30px;
+      border: 3px solid #333;
+      border-top-color: #f5a623;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-msg { color: #f87171; }
+
+    hr.divider {
+      width: 100%;
+      max-width: 480px;
+      border: none;
+      border-top: 1px solid #0f3460;
+    }
+
+    footer {
+      font-size: 0.68rem;
+      color: #444;
+      text-align: center;
+    }
+
+    footer a { color: #555; }
+  </style>
+</head>
+<body>
+
+<!-- Stop 1: Piesporter Str. / X54 -->
+<section class="stop-section" id="section-piesporter">
+  <div class="stop-header">
+    <div class="stop-name">Piesporter Str. &mdash; Berlin</div>
+    <div class="line-badges">
+      <span class="line-badge express">X54</span>
+    </div>
+    <div class="walk-info"><span>&#x1F6B6;</span> 8 min walk</div>
+    <div class="updated-at" id="updated-piesporter">Loading&hellip;</div>
+  </div>
+  <div class="departures-list" id="deps-piesporter">
+    <div class="status-box"><div class="spinner"></div>Fetching departures&hellip;</div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- Stop 2: Nüßlerstr./Feldtmannstr. / 255 + 259 -->
+<section class="stop-section" id="section-nuessler">
+  <div class="stop-header">
+    <div class="stop-name">N&uuml;&szlig;lerstr./Feldtmannstr. &mdash; Berlin</div>
+    <div class="line-badges">
+      <span class="line-badge bus">255</span>
+      <span class="line-badge bus">259</span>
+    </div>
+    <div class="walk-info"><span>&#x1F6B6;</span> 10 min walk</div>
+    <div class="updated-at" id="updated-nuessler">Loading&hellip;</div>
+  </div>
+  <div class="departures-list" id="deps-nuessler">
+    <div class="status-box"><div class="spinner"></div>Fetching departures&hellip;</div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- Stop 3: Giersstr. / M4 -->
+<section class="stop-section" id="section-giersstr">
+  <div class="stop-header">
+    <div class="stop-name">Giersstr. &mdash; Berlin</div>
+    <div class="line-badges">
+      <span class="line-badge tram">M4</span>
+    </div>
+    <div class="walk-info"><span>&#x1F6B6;</span> 20 min walk</div>
+    <div class="updated-at" id="updated-giersstr">Loading&hellip;</div>
+  </div>
+  <div class="departures-list" id="deps-giersstr">
+    <div class="status-box"><div class="spinner"></div>Fetching departures&hellip;</div>
+  </div>
+</section>
+
+<footer>
+  Data: <a href="https://v6.bvg.transport.rest" target="_blank">v6.bvg.transport.rest</a> &bull; auto-refresh every 30s
+</footer>
+
+<script>
+  const DURATION = 90;
+  const RESULTS  = 15;
+  const REFRESH  = 30_000;
+
+  const STOPS = [
+    {
+      stopId:    '900140001',
+      lines:     ['X54'],
+      listEl:    document.getElementById('deps-piesporter'),
+      updatedEl: document.getElementById('updated-piesporter'),
+    },
+    {
+      stopId:    '900140513',
+      lines:     ['255', '259'],
+      listEl:    document.getElementById('deps-nuessler'),
+      updatedEl: document.getElementById('updated-nuessler'),
+    },
+    {
+      stopId:    '900140014',
+      lines:     ['M4'],
+      listEl:    document.getElementById('deps-giersstr'),
+      updatedEl: document.getElementById('updated-giersstr'),
+    },
+  ];
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function minsUntil(iso) {
+    if (!iso) return null;
+    return Math.round((new Date(iso) - Date.now()) / 60000);
+  }
+
+  function lineClass(name) {
+    if (!name) return 'bus';
+    if (name.startsWith('X')) return 'express';
+    if (name.startsWith('M') || name.startsWith('T')) return 'tram';
+    return 'bus';
+  }
+
+  async function fetchDepartures(stopId, lines) {
+    const when = new Date().toISOString();
+    const url  = `https://v6.bvg.transport.rest/stops/${stopId}/departures`
+               + `?results=${RESULTS}&duration=${DURATION}&when=${encodeURIComponent(when)}&language=en`;
+
+    const res  = await fetch(url);
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    const data = await res.json();
+    const all  = Array.isArray(data) ? data : (data.departures ?? []);
+
+    return all
+      .filter(d => {
+        if (!d.line || !lines.includes(d.line.name)) return false;
+        const mins = Math.round((new Date(d.when ?? d.plannedWhen) - Date.now()) / 60000);
+        return mins >= 8;
+      })
+      .slice(0, 3);
+  }
+
+  function renderCard(dep, isNext) {
+    const mins      = minsUntil(dep.when ?? dep.plannedWhen);
+    const delaySec  = dep.delay ?? 0;
+    const delayMins = Math.round(delaySec / 60);
+    const cancelled = dep.cancelled === true;
+    const lineName  = dep.line?.name ?? '?';
+
+    const card = document.createElement('div');
+    card.className = 'departure-card'
+      + (isNext && !cancelled ? ' is-next' : '')
+      + (cancelled ? ' cancelled' : '');
+
+    // line pill
+    const linePill = document.createElement('span');
+    linePill.className = `card-line ${lineClass(lineName)}`;
+    linePill.textContent = lineName;
+
+    // countdown
+    const countdownDiv = document.createElement('div');
+    countdownDiv.className = 'countdown';
+
+    const minsDiv = document.createElement('div');
+    minsDiv.className = 'mins';
+    if (cancelled) {
+      minsDiv.textContent = 'CANC.';
+    } else if (mins !== null && mins <= 0) {
+      minsDiv.textContent = 'NOW';
+    } else {
+      minsDiv.textContent = mins !== null ? mins : '—';
+    }
+
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'label';
+    labelDiv.textContent = (mins !== null && mins > 0 && !cancelled) ? 'min' : '';
+
+    countdownDiv.append(minsDiv, labelDiv);
+
+    // info
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'info';
+
+    const dirDiv = document.createElement('div');
+    dirDiv.className = 'direction';
+    dirDiv.textContent = dep.direction ?? 'Unknown destination';
+
+    const timesDiv = document.createElement('div');
+    timesDiv.className = 'times';
+
+    const plannedSpan = document.createElement('span');
+    plannedSpan.className = 'time-planned';
+    plannedSpan.textContent = fmtTime(dep.plannedWhen);
+    timesDiv.appendChild(plannedSpan);
+
+    if (!cancelled) {
+      if (delayMins > 0) {
+        const realSpan = document.createElement('span');
+        realSpan.textContent = `→ ${fmtTime(dep.when)}`;
+        timesDiv.appendChild(realSpan);
+
+        const badge = document.createElement('span');
+        badge.className = 'badge delayed';
+        badge.textContent = `+${delayMins} min`;
+        timesDiv.appendChild(badge);
+      } else {
+        const badge = document.createElement('span');
+        badge.className = 'badge on-time';
+        badge.textContent = 'On time';
+        timesDiv.appendChild(badge);
+      }
+      if (isNext) {
+        const nb = document.createElement('span');
+        nb.className = 'badge next-tag';
+        nb.textContent = 'Next';
+        timesDiv.appendChild(nb);
+      }
+    } else {
+      const badge = document.createElement('span');
+      badge.className = 'badge cancelled';
+      badge.textContent = 'Cancelled';
+      timesDiv.appendChild(badge);
+    }
+
+    infoDiv.append(dirDiv, timesDiv);
+    card.append(linePill, countdownDiv, infoDiv);
+    return card;
+  }
+
+  async function refreshStop({ stopId, lines, listEl, updatedEl }) {
+    try {
+      const deps = await fetchDepartures(stopId, lines);
+      listEl.innerHTML = '';
+
+      if (deps.length === 0) {
+        listEl.innerHTML = `<div class="status-box"><div class="error-msg">No departures found for ${lines.join('/')} in the next 90 min.</div></div>`;
+      } else {
+        deps.forEach((dep, i) => listEl.appendChild(renderCard(dep, i === 0)));
+      }
+
+      const now = new Date();
+      updatedEl.textContent = `Updated ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    } catch (err) {
+      listEl.innerHTML = `<div class="status-box"><div class="error-msg">Could not load departures.<br><small>${err.message}</small></div></div>`;
+      updatedEl.textContent = 'Failed to update';
+      console.error(err);
+    }
+  }
+
+  function refreshAll() {
+    STOPS.forEach(refreshStop);
+  }
+
+  refreshAll();
+  setInterval(refreshAll, REFRESH);
+</script>
+</body>
+</html>
