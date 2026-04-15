@@ -8,8 +8,8 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #1a1a2e;
-      color: #e0e0e0;
+      background: #ffffff;
+      color: #1a1a2e;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       min-height: 100vh;
       display: flex;
@@ -31,7 +31,7 @@
 
     .stop-name {
       font-size: 0.85rem;
-      color: #888;
+      color: #666;
       text-transform: uppercase;
       letter-spacing: 0.12em;
       margin-bottom: 8px;
@@ -60,16 +60,18 @@
     .walk-info {
       font-size: 1.4rem;
       font-weight: 600;
-      color: #bbb;
+      color: #555;
       margin-top: 8px;
       letter-spacing: 0.03em;
     }
 
     .updated-at {
       font-size: 0.7rem;
-      color: #555;
+      color: #999;
       margin-top: 8px;
     }
+
+    .departures-list {
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -78,13 +80,13 @@
     .status-box {
       text-align: center;
       padding: 32px 0;
-      color: #555;
+      color: #999;
       font-size: 0.9rem;
     }
 
     .departure-card {
-      background: #16213e;
-      border: 1px solid #0f3460;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
       border-radius: 12px;
       padding: 14px 18px;
       display: flex;
@@ -92,9 +94,14 @@
       gap: 14px;
     }
 
-    .departure-card.is-next {
-      border-color: #f5a623;
-      background: #1e2d50;
+    /* direction-based background tints */
+    .departure-card.dir-a {
+      background: #cce8f8;
+      border-color: #5aaad4;
+    }
+    .departure-card.dir-b {
+      background: #c8eeea;
+      border-color: #4ab8b0;
     }
 
     .departure-card.cancelled {
@@ -125,10 +132,9 @@
       font-size: 2rem;
       font-weight: 800;
       line-height: 1;
-      color: #f5a623;
+      color: #e08000;
     }
 
-    .departure-card.is-next .countdown .mins { color: #fff; }
     .departure-card.cancelled .countdown .mins { color: #c0392b; font-size: 0.9rem; }
 
     .countdown .label {
@@ -143,7 +149,7 @@
     .direction {
       font-size: 0.9rem;
       font-weight: 600;
-      color: #ddd;
+      color: #1a1a2e;
       margin-bottom: 4px;
       white-space: nowrap;
       overflow: hidden;
@@ -159,7 +165,7 @@
       flex-wrap: wrap;
     }
 
-    .time-planned { color: #999; }
+    .time-planned { color: #888; }
 
     .badge {
       font-size: 0.65rem;
@@ -171,14 +177,13 @@
       white-space: nowrap;
     }
 
-    .badge.on-time   { background: #1a4a2e; color: #4ade80; }
-    .badge.delayed   { background: #4a2a1a; color: #fb923c; }
-    .badge.cancelled { background: #4a1a1a; color: #f87171; }
-    .badge.next-tag  { background: #f5a623; color: #1a1a2e; }
+    .badge.on-time   { background: #d4f5e2; color: #1a7a40; }
+    .badge.delayed   { background: #fde8d0; color: #b85000; }
+    .badge.cancelled { background: #fdd0d0; color: #a00000; }
 
     .spinner {
       width: 30px; height: 30px;
-      border: 3px solid #333;
+      border: 3px solid #ddd;
       border-top-color: #f5a623;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
@@ -187,22 +192,22 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .error-msg { color: #f87171; }
+    .error-msg { color: #c0392b; }
 
     hr.divider {
       width: 100%;
       max-width: 480px;
       border: none;
-      border-top: 1px solid #0f3460;
+      border-top: 1px solid #ddd;
     }
 
     footer {
       font-size: 0.68rem;
-      color: #444;
+      color: #aaa;
       text-align: center;
     }
 
-    footer a { color: #555; }
+    footer a { color: #999; }
   </style>
 </head>
 <body>
@@ -257,6 +262,22 @@
   </div>
 </section>
 
+<hr class="divider">
+
+<!-- Stop 4: Berliner Allee / Rennbahnstr. / Tram 12 -->
+<section class="stop-section" id="section-berliner-allee">
+  <div class="stop-header">
+    <div class="stop-name">Berliner Allee / Rennbahnstr. &mdash; Berlin</div>
+    <div class="line-badges">
+      <span class="line-badge tram">12</span>
+    </div>
+    <div class="updated-at" id="updated-berliner-allee">Loading&hellip;</div>
+  </div>
+  <div class="departures-list" id="deps-berliner-allee">
+    <div class="status-box"><div class="spinner"></div>Fetching departures&hellip;</div>
+  </div>
+</section>
+
 <footer>
   Data: <a href="https://v6.bvg.transport.rest" target="_blank">v6.bvg.transport.rest</a> &bull; auto-refresh every 30s
 </footer>
@@ -282,8 +303,19 @@
     {
       stopId:    '900140014',
       lines:     ['M4'],
+      // dir-a (blue) = westbound: U Osloer Str. normally, or Hackescher Markt during M4 construction replacement
+      // dir-b (turquoise) = eastbound: S-Marzahn
+      dirAKeywords: ['osloer', 'hackescher'],
       listEl:    document.getElementById('deps-giersstr'),
       updatedEl: document.getElementById('updated-giersstr'),
+    },
+    {
+      stopId:    '900140013',
+      lines:     ['12'],
+      // Pasedag (Pasedagplatz) is just one stop away — omit that direction
+      excludeDirections: ['pasedagplatz', 'pasedag'],
+      listEl:    document.getElementById('deps-berliner-allee'),
+      updatedEl: document.getElementById('updated-berliner-allee'),
     },
   ];
 
@@ -300,14 +332,16 @@
     return Math.round((new Date(iso) - Date.now()) / 60000);
   }
 
-  function lineClass(name) {
+  function lineClass(name, product) {
+    if (product === 'suburban' || product === 'subway') return 'express';
+    if (product === 'tram') return 'tram';
     if (!name) return 'bus';
     if (name.startsWith('X')) return 'express';
     if (name.startsWith('M') || name.startsWith('T')) return 'tram';
     return 'bus';
   }
 
-  async function fetchDepartures(stopId, lines) {
+  async function fetchDepartures(stopId, lines, excludeDirections = []) {
     const when = new Date().toISOString();
     const url  = `https://v6.bvg.transport.rest/stops/${stopId}/departures`
                + `?results=${RESULTS}&duration=${DURATION}&when=${encodeURIComponent(when)}&language=en`;
@@ -321,12 +355,17 @@
       .filter(d => {
         if (!d.line || !lines.includes(d.line.name)) return false;
         const mins = Math.round((new Date(d.when ?? d.plannedWhen) - Date.now()) / 60000);
-        return mins >= 8;
+        if (mins < 8) return false;
+        if (excludeDirections.length > 0) {
+          const dir = (d.direction ?? '').toLowerCase();
+          if (excludeDirections.some(ex => dir.includes(ex))) return false;
+        }
+        return true;
       })
-      .slice(0, 3);
+      .slice(0, 4);
   }
 
-  function renderCard(dep, isNext) {
+  function renderCard(dep, dirClass) {
     const mins      = minsUntil(dep.when ?? dep.plannedWhen);
     const delaySec  = dep.delay ?? 0;
     const delayMins = Math.round(delaySec / 60);
@@ -335,12 +374,12 @@
 
     const card = document.createElement('div');
     card.className = 'departure-card'
-      + (isNext && !cancelled ? ' is-next' : '')
+      + (dirClass ? ` ${dirClass}` : '')
       + (cancelled ? ' cancelled' : '');
 
     // line pill
     const linePill = document.createElement('span');
-    linePill.className = `card-line ${lineClass(lineName)}`;
+    linePill.className = `card-line ${lineClass(lineName, dep.line?.product)}`;
     linePill.textContent = lineName;
 
     // countdown
@@ -395,12 +434,6 @@
         badge.textContent = 'On time';
         timesDiv.appendChild(badge);
       }
-      if (isNext) {
-        const nb = document.createElement('span');
-        nb.className = 'badge next-tag';
-        nb.textContent = 'Next';
-        timesDiv.appendChild(nb);
-      }
     } else {
       const badge = document.createElement('span');
       badge.className = 'badge cancelled';
@@ -413,15 +446,32 @@
     return card;
   }
 
-  async function refreshStop({ stopId, lines, listEl, updatedEl }) {
+  async function refreshStop({ stopId, lines, excludeDirections = [], dirAKeywords, listEl, updatedEl }) {
     try {
-      const deps = await fetchDepartures(stopId, lines);
+      const deps = await fetchDepartures(stopId, lines, excludeDirections);
       listEl.innerHTML = '';
 
       if (deps.length === 0) {
         listEl.innerHTML = `<div class="status-box"><div class="error-msg">No departures found for ${lines.join('/')} in the next 90 min.</div></div>`;
       } else {
-        deps.forEach((dep, i) => listEl.appendChild(renderCard(dep, i === 0)));
+        // Assign direction group classes.
+        // If dirAKeywords is set, match explicitly; otherwise use order of first appearance.
+        const dirMap = {};
+        deps.forEach(dep => {
+          const dir = dep.direction ?? '';
+          if (!(dir in dirMap)) {
+            if (dirAKeywords) {
+              const d = dir.toLowerCase();
+              dirMap[dir] = dirAKeywords.some(k => d.includes(k.toLowerCase())) ? 'dir-a' : 'dir-b';
+            } else {
+              dirMap[dir] = Object.keys(dirMap).length === 0 ? 'dir-a' : 'dir-b';
+            }
+          }
+        });
+        deps.forEach((dep, i) => {
+          const dirClass = dirMap[dep.direction ?? ''] ?? '';
+          listEl.appendChild(renderCard(dep, dirClass));
+        });
       }
 
       const now = new Date();
