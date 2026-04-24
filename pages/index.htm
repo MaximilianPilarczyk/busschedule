@@ -270,7 +270,11 @@
     <div class="stop-name">Berliner Allee / Rennbahnstr. &mdash; Berlin</div>
     <div class="line-badges">
       <span class="line-badge tram">12</span>
+      <span class="line-badge tram">M13</span>
+      <span class="line-badge bus">156</span>
+      <span class="line-badge bus">N50</span>
     </div>
+    <div class="walk-info"><span>&#x1F6B6;</span> 22 min walk</div>
     <div class="updated-at" id="updated-berliner-allee">Loading&hellip;</div>
   </div>
   <div class="departures-list" id="deps-berliner-allee">
@@ -311,7 +315,8 @@
     },
     {
       stopId:    '900140013',
-      lines:     ['12'],
+      lines:     ['12', 'M13', '156', 'N50'],
+      minMins:   22,
       // Pasedag (Pasedagplatz) is just one stop away — omit that direction
       excludeDirections: ['pasedagplatz', 'pasedag'],
       listEl:    document.getElementById('deps-berliner-allee'),
@@ -341,10 +346,11 @@
     return 'bus';
   }
 
-  async function fetchDepartures(stopId, lines, excludeDirections = []) {
+  async function fetchDepartures(stopId, lines, excludeDirections = [], minMins = 8) {
     const when = new Date().toISOString();
+    const results = minMins > 8 ? 30 : RESULTS;
     const url  = `https://v6.bvg.transport.rest/stops/${stopId}/departures`
-               + `?results=${RESULTS}&duration=${DURATION}&when=${encodeURIComponent(when)}&language=en`;
+               + `?results=${results}&duration=${DURATION}&when=${encodeURIComponent(when)}&language=en`;
 
     const res  = await fetch(url);
     if (!res.ok) throw new Error(`API error ${res.status}`);
@@ -355,7 +361,7 @@
       .filter(d => {
         if (!d.line || !lines.includes(d.line.name)) return false;
         const mins = Math.round((new Date(d.when ?? d.plannedWhen) - Date.now()) / 60000);
-        if (mins < 8) return false;
+        if (mins < minMins) return false;
         if (excludeDirections.length > 0) {
           const dir = (d.direction ?? '').toLowerCase();
           if (excludeDirections.some(ex => dir.includes(ex))) return false;
@@ -446,9 +452,9 @@
     return card;
   }
 
-  async function refreshStop({ stopId, lines, excludeDirections = [], dirAKeywords, listEl, updatedEl }) {
+  async function refreshStop({ stopId, lines, excludeDirections = [], minMins = 8, dirAKeywords, listEl, updatedEl }) {
     try {
-      const deps = await fetchDepartures(stopId, lines, excludeDirections);
+      const deps = await fetchDepartures(stopId, lines, excludeDirections, minMins);
       listEl.innerHTML = '';
 
       if (deps.length === 0) {
